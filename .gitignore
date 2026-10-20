@@ -107,3 +107,11 @@ crashlytics.properties
 crashlytics-build.properties
 
 
+
+### Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Titanic.scala output
+src/main/resources/titanic/result/

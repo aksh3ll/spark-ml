@@ -8,36 +8,33 @@ import org.apache.spark.ml.evaluation.BinaryClassificationEvaluator
 import org.apache.spark.ml.feature._
 import org.apache.spark.ml.tuning.{CrossValidator, ParamGridBuilder}
 import org.apache.spark.ml.{Pipeline, PipelineModel}
-import org.apache.spark.sql.SQLContext
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.types._
-import org.apache.spark.{SparkConf, SparkContext}
 
 object Titanic {
 
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
     FileUtils.deleteDirectory(new File("src/main/resources/titanic/result"))
 
-    val conf = new SparkConf()
-      .setAppName("Titanic")
-      .setMaster("local[*]")
+    val spark = SparkSession.builder()
+      .appName("Titanic")
+      .master("local[*]")
+      .getOrCreate()
 
-    val sc = new SparkContext(conf)
-
-    val sqlContext = new SQLContext(sc)
     // We use the $ operator from implicit class StringToColumn
-    import sqlContext.implicits._
+    import spark.implicits._
 
     // Load the train.csv file as a DataFrame
-    // Use the spark-csv library see https://github.com/databricks/spark-csv
-    val csv = sqlContext.read.format("com.databricks.spark.csv").option("header", "true").load("src/main/resources/titanic/train.csv")
+    val csv = spark.read.format("csv").option("header", "true").load("src/main/resources/titanic/train.csv")
 
-    // spark-csv put the type StringType to each column
+    // without schema inference the csv reader puts the type StringType to each column
     csv.printSchema()
 
     // select only the useful columns, rename them and cast them to the right type
+    // (ANSI mode rejects casting "28.5" straight to int, so go through double to truncate it)
     val df = csv.select(
       $"Survived".as("label").cast(DoubleType),
-      $"Age".as("age").cast(IntegerType),
+      $"Age".as("age").cast(DoubleType).cast(IntegerType),
       $"Fare".as("fare").cast(DoubleType),
       $"Pclass".as("class").cast(DoubleType),
       $"Sex".as("sex"),
@@ -109,11 +106,11 @@ object Titanic {
 
     // Lets make prediction on new data where the label is unknown
     println("Predict validationPredictions.csv passengers fate")
-    val csvTest = sqlContext.read.format("com.databricks.spark.csv").option("header", "true").load("src/main/resources/titanic/test.csv")
+    val csvTest = spark.read.format("csv").option("header", "true").load("src/main/resources/titanic/test.csv")
 
     val dfTest = csvTest.select(
       $"PassengerId",
-      $"Age".as("age").cast(IntegerType),
+      $"Age".as("age").cast(DoubleType).cast(IntegerType),
       $"Fare".as("fare").cast(DoubleType),
       $"Pclass".as("class").cast(DoubleType),
       $"Sex".as("sex"),
@@ -127,7 +124,7 @@ object Titanic {
 
     // let's write the result in the correct format for Kaggle
     result.select($"PassengerId", $"prediction".cast(IntegerType))
-      .write.format("com.databricks.spark.csv").save("src/main/resources/titanic/result")
+      .write.format("csv").save("src/main/resources/titanic/result")
   }
 
 
