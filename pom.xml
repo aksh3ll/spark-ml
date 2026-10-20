@@ -12,7 +12,7 @@
     <properties>
         <scala.version>2.10.4</scala.version>
         <scala.dep.version>2.10</scala.dep.version>
-        <spark.version>1.4.0</spark.version>
+        <spark.version>2.2.3</spark.version>
         <spark-csv.version>1.1.0</spark-csv.version>
     </properties>
 
